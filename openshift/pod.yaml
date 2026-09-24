@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pipeline-tracker
+  namespace: mfec-pipeline-tools
+  labels:
+    app: pipeline-tracker
+spec:
+  containers:
+  - name: web
+    image: busybox:1.36
+    command:
+    - /bin/httpd
+    - -f
+    - -v
+    - -p
+    - /data
+    - -c
+    - httpd.conf
+    ports:
+    - containerPort: 8080
+      name: http
+    volumeMounts:
+    - name: app
+      mountPath: /data
+    - name: js
+      mountPath: /data/js
+    - name: xlsx
+      mountPath: /data/libs
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 8080
+      initialDelaySeconds: 3
+      periodSeconds: 5
+  volumes:
+  - name: app
+    configMap:
+      name: pipeline-tracker-app
+  - name: js
+    configMap:
+      name: pipeline-tracker-js
+  - name: xlsx
+    configMap:
+      name: pipeline-tracker-xlsx

@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-tracker
+  namespace: mfec-pipeline-tools
+  labels:
+    app: pipeline-tracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pipeline-tracker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: pipeline-tracker
+    spec:
+      # หมายเหตุ: ไม่ตั้งค่า securityContext.userns หรือ supplementalGroups
+      # เพราะ CRI-O runtime นี้มีปัญหา `setgroups: Invalid argument` กับภาพที่มี USER directive
+      # Busybox:1.36 ไม่มี USER directive จึงใช้ได้ปกติ
+      containers:
+      - name: web
+        image: busybox:1.36
+        command:
+        - /bin/httpd
+        - -f
+        - -v
+        - -p
+        - /data
+        - -c
+        - httpd.conf
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: app
+          mountPath: /data
+        - name: js
+          mountPath: /data/js
+        - name: xlsx
+          mountPath: /data/libs
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: app
+        configMap:
+          name: pipeline-tracker-app
+      - name: js
+        configMap:
+          name: pipeline-tracker-js
+      - name: xlsx
+        configMap:
+          name: pipeline-tracker-xlsx

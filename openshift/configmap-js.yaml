@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipeline-tracker-js
+  namespace: mfec-pipeline-tools
+  labels:
+    app: pipeline-tracker
+data:
+  js/app.js: |
+    // Main app bootstrap
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Pipeline Tracker initialized');
+    });
+  js/upload.js: |
+    // File upload handler
+    console.log('Upload module loaded');
+  js/pivot.js: |
+    // Pivot table logic
+    console.log('Pivot module loaded');
+  js/report.js: |
+    // Report display
+    console.log('Report module loaded');
+  js/dashboard.js: |
+    // Dashboard display
+    console.log('Dashboard module loaded');

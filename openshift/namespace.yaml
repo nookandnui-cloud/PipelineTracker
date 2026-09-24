@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mfec-pipeline-tools
+  labels:
+    app.kubernetes.io/managed-by: pipeline-tracker
+    app: pipeline-tracker
+    environment: tools

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pipeline-tracker
+  namespace: mfec-pipeline-tools
+  labels:
+    app: pipeline-tracker
+spec:
+  selector:
+    app: pipeline-tracker
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipeline-tracker-xlsx
+  namespace: mfec-pipeline-tools
+  labels:
+    app: pipeline-tracker
+  annotations:
+    # NOTE: This file is a marker only. The real xlsx.full.min.js (~951KB) cannot be
+    # embedded inline here because it exceeds readable size and ConfigMap/application
+    # convention. To populate the real data, run one of:
+    #
+    #   oc create configmap pipeline-tracker-xlsx \
+    #     --from-file=libs/xlsx.full.min.js=libs/xlsx.full.min.js \
+    #     -n mfec-pipeline-tools
+    #
+    # Or, after oc apply of this marker, overwrite with:
+    #
+    #   oc set data configmap/pipeline-tracker-xlsx \
+    #     --from-file=libs/xlsx.full.min.js=libs/xlsx.full.min.js \
+    #     -n mfec-pipeline-tools
+    #
+    # This ConfigMap is referenced by pod.yaml volume "xlsx" mountPath /data/libs.
+    placeholder: "replace-me-via-oc-create-or-oc-set-data"
