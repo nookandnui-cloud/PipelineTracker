@@ -92,11 +92,11 @@ try {
   const h = makeEl("main");
   vm.runInContext("Report.render", sandbox)(h);
   let html = h.innerHTML;
-  if (!html.includes('id="rpMode"')) throw new Error("ไม่พบปุ่ม mode");
-  if (!html.includes("รายเดือน") || !html.includes("ราย Q") || !html.includes("รายปี")) throw new Error("ไม่พบปุ่มรายเดือน/Q/ปี");
-  console.log("PASS report period filter UI ปรากฏ (mode: all)");
+  if (!html.includes('id="rpMode"')) throw new Error("mode buttons not found");
+  if (!html.includes("Monthly") || !html.includes("Quarterly") || !html.includes("Yearly")) throw new Error("period mode buttons not found");
+  console.log("PASS report period filter UI present (mode: all)");
 
-  /* จำลองเลือกรายปี 2025 แล้ว render ใหม่ — ต้องเหลือเฉพาะโปรเจกต์ที่ startDate ปี 2025 */
+  /* simulate selecting Yearly 2025 and re-render — must keep only projects with startDate in 2025 */
   const Report = vm.runInContext("Report", sandbox);
   vm.runInContext("void (Report._setPeriod && Report._setPeriod('year','2025'))", sandbox);
   const all = PT.projects();
@@ -104,10 +104,10 @@ try {
   const h2 = makeEl("main");
   Report.render(h2);
   const html2 = h2.innerHTML;
-  const m = /(\d+) โปรเจกต์/.exec(html2);
+  const m = /(\d+) projects/.exec(html2);
   const shown = m ? +m[1] : -1;
-  if (shown !== exp2025) throw new Error(`รายปี 2025 ควรเหลือ ${exp2025} แต่ได้ ${shown}`);
-  console.log(`PASS report รายปี 2025 กรองได้ ${shown} โปรเจกต์ (ตรงตาม startDate)`);
+  if (shown !== exp2025) throw new Error(`yearly 2025 should show ${exp2025} but got ${shown}`);
+  console.log(`PASS report yearly 2025 filters to ${shown} projects (matches startDate)`);
 } catch (e) { fails++; console.log("FAIL report period filter:", e.message); }
 
 /* ExcelSync: สร้าง workbook ได้ + ชื่อไฟล์รายวัน */

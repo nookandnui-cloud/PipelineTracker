@@ -1,4 +1,4 @@
-/* report.js — รายงาน: filter รายเดือน/Q/ปี + pivot ทีม×สถานะ, presales×สถานะ, watchlist, export */
+/* report.js — report: month/quarter/year filter + team×status pivot, presales pivot, watchlist, export */
 "use strict";
 
 const Report = (() => {
@@ -6,7 +6,7 @@ const Report = (() => {
   let periodMode = "all";   // all | month | quarter | year
   let periodValue = "";
 
-  /* โปรเจกต์อยู่ในช่วงเวลาที่เลือกหรือไม่ (ยึดตาม Start Date) */
+  /* does the project fall in the selected period? (based on Start Date) */
   function inPeriod(p) {
     if (periodMode === "all") return true;
     const d = p.startDate ? new Date(p.startDate) : null;
@@ -17,10 +17,10 @@ const Report = (() => {
   }
 
   function periodLabel() {
-    if (periodMode === "all") return "ทุกช่วงเวลา";
+    if (periodMode === "all") return "All periods";
     if (periodMode === "month") {
       const [y, m] = periodValue.split("-").map(Number);
-      return new Date(y, m - 1, 1).toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+      return new Date(y, m - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
     }
     return periodValue;
   }
@@ -29,7 +29,7 @@ const Report = (() => {
     const all = PT.projects();
     const P = all.filter(inPeriod);
 
-    /* ตัวเลือกช่วงเวลาจากข้อมูลจริง (Start Date) */
+    /* period options from actual data (Start Date) */
     const months = [...new Set(all.map(p => p.startDate).filter(Boolean).map(s => s.slice(0, 7)))].sort().reverse();
     const quarters = [...new Set(all.map(p => {
       if (!p.startDate) return null;
@@ -47,39 +47,39 @@ const Report = (() => {
 
     view.innerHTML = `
       <div class="view-head">
-        <h1>รายงาน Pipeline</h1>
-        <span class="sub">${periodLabel()} · ${P.length} โปรเจกต์</span>
+        <h1>Pipeline Report</h1>
+        <span class="sub">${periodLabel()} · ${P.length} projects</span>
         <span class="spacer"></span>
-        <button class="btn small" id="rpPrint">พิมพ์ / PDF</button>
-        <button class="btn primary small" id="rpExport">ส่งออกรายงาน CSV</button>
+        <button class="btn small" id="rpPrint">Print / PDF</button>
+        <button class="btn primary small" id="rpExport">Export CSV</button>
       </div>
 
       <div class="card" style="margin-bottom:14px">
         <div class="filters">
-          <label>ช่วงเวลา</label>
+          <label>Period</label>
           <div class="seg" id="rpMode">
-            <button data-m="all" class="${periodMode === "all" ? "on" : ""}">ทั้งหมด</button>
-            <button data-m="month" class="${periodMode === "month" ? "on" : ""}">รายเดือน</button>
-            <button data-m="quarter" class="${periodMode === "quarter" ? "on" : ""}">ราย Q</button>
-            <button data-m="year" class="${periodMode === "year" ? "on" : ""}">รายปี</button>
+            <button data-m="all" class="${periodMode === "all" ? "on" : ""}">All</button>
+            <button data-m="month" class="${periodMode === "month" ? "on" : ""}">Monthly</button>
+            <button data-m="quarter" class="${periodMode === "quarter" ? "on" : ""}">Quarterly</button>
+            <button data-m="year" class="${periodMode === "year" ? "on" : ""}">Yearly</button>
           </div>
           <select id="rpValue" ${periodMode === "all" ? "hidden" : ""}>
             ${periodMode === "month" ? months.map(m => {
               const [y, mo] = m.split("-");
-              return `<option value="${m}" ${periodValue === m ? "selected" : ""}>${new Date(y, mo - 1, 1).toLocaleDateString("th-TH", { month: "long", year: "numeric" })}</option>`;
+              return `<option value="${m}" ${periodValue === m ? "selected" : ""}>${new Date(y, mo - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</option>`;
             }).join("") : ""}
             ${periodMode === "quarter" ? quarters.map(q => `<option value="${q}" ${periodValue === q ? "selected" : ""}>${q}</option>`).join("") : ""}
-            ${periodMode === "year" ? years.map(y => `<option value="${y}" ${periodValue === y ? "selected" : ""}>${+y + 543} (${y})</option>`).join("") : ""}
+            ${periodMode === "year" ? years.map(y => `<option value="${y}" ${periodValue === y ? "selected" : ""}>${y}</option>`).join("") : ""}
           </select>
-          ${noDate && periodMode !== "all" ? `<span class="muted small">อีก ${noDate} โปรเจกต์ไม่มี Start Date → ไม่ถูกนับในช่วงนี้</span>` : ""}
+          ${noDate && periodMode !== "all" ? `<span class="muted small">${noDate} projects have no Start Date → excluded</span>` : ""}
         </div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
-        <div class="card-head"><h2>สรุปทีม × สถานะ (เหมือน Pivot ใน Excel)</h2></div>
+        <div class="card-head"><h2>Team × Status (like the Excel Pivot)</h2></div>
         <div class="tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>ทีม</th><th class="num">In Progress</th><th class="num">Win</th><th class="num">Lost</th><th class="num">Drop</th><th class="num">รวม</th><th class="num">มูลค่ารวม</th><th class="num">มูลค่าเปิด</th></tr></thead>
+            <thead><tr><th>Team</th><th class="num">In Progress</th><th class="num">Win</th><th class="num">Lost</th><th class="num">Drop</th><th class="num">Total</th><th class="num">Total Value</th><th class="num">Open Value</th></tr></thead>
             <tbody>
               ${order.map(t => `<tr>
                 <td><span class="team-chip team-${t}">${t}</span></td>
@@ -107,10 +107,10 @@ const Report = (() => {
       </div>
 
       <div class="card" style="margin-bottom:14px">
-        <div class="card-head"><h2>สรุป Presales × สถานะ</h2></div>
+        <div class="card-head"><h2>Presales × Status</h2></div>
         <div class="tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>Presales</th><th class="num">In Progress</th><th class="num">Win</th><th class="num">Lost</th><th class="num">Drop</th><th class="num">รวม</th><th class="num">มูลค่าเปิด</th><th class="num">มูลค่าปิด</th></tr></thead>
+            <thead><tr><th>Presales</th><th class="num">In Progress</th><th class="num">Win</th><th class="num">Lost</th><th class="num">Drop</th><th class="num">Total</th><th class="num">Open Value</th><th class="num">Closed Value</th></tr></thead>
             <tbody>
               ${Object.keys(presales).sort((a, b) => presales[b].total - presales[a].total).map(u => `<tr>
                 <td>${PT.esc(u)}</td>
@@ -129,11 +129,11 @@ const Report = (() => {
 
       <div class="grid cols-2">
         <div class="card">
-          <div class="card-head"><h2>Win (เรียงตามมูลค่า)</h2></div>
+          <div class="card-head"><h2>Wins (by value)</h2></div>
           <div class="tbl-wrap">${miniList(P.filter(p => p.status === "Win").sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 10))}</div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>เฝ้าระวัง: In Progress ที่ถึง/เลย Target</h2></div>
+          <div class="card-head"><h2>Watchlist: In Progress at / past Target</h2></div>
           <div class="tbl-wrap">${miniList(P.filter(p => p.status === "In Progress" && p.target && PT.quarterIndex(p.target) <= curIdx()).sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 10))}</div>
         </div>
       </div>`;
@@ -156,7 +156,7 @@ const Report = (() => {
   function presalesMatrix(P) {
     const m = {};
     for (const p of P) {
-      const u = p.presales || "(ไม่ระบุ)";
+      const u = p.presales || "(unassigned)";
       m[u] = m[u] || { "In Progress": 0, "Win": 0, "Lost": 0, "Drop": 0, total: 0, openRev: 0, closedRev: 0 };
       m[u][p.status] = (m[u][p.status] || 0) + 1;
       m[u].total++;
@@ -169,7 +169,7 @@ const Report = (() => {
   function curIdx() { return PT.quarterIndex(`Q${Math.floor(new Date().getMonth() / 3) + 1}/${new Date().getFullYear()}`); }
 
   function miniList(rows) {
-    if (!rows.length) return `<div class="empty">ไม่มีข้อมูล</div>`;
+    if (!rows.length) return `<div class="empty">No data</div>`;
     return `<table class="tbl"><tbody>${rows.map(p => `<tr data-id="${p.id}">
       <td><span class="team-chip team-${p.team}">${p.team || "—"}</span></td>
       <td class="strong">${PT.esc(p.name)}</td>
@@ -180,20 +180,20 @@ const Report = (() => {
 
   function exportReport(P, teams, order, grand, presales) {
     const rows = [
-      ["รายงาน Pipeline", periodLabel(), `ข้อมูล ณ ${new Date().toLocaleDateString("th-TH")}`],
+      ["Pipeline Report", periodLabel(), `Data as of ${new Date().toISOString().slice(0, 10)}`],
       [],
-      ["สรุปทีม × สถานะ"],
-      ["ทีม", "In Progress", "Win", "Lost", "Drop", "รวม", "มูลค่ารวม", "มูลค่าเปิด"],
+      ["Team × Status"],
+      ["Team", "In Progress", "Win", "Lost", "Drop", "Total", "Total Value", "Open Value"],
       ...order.map(t => [t, teams[t]["In Progress"], teams[t]["Win"], teams[t]["Lost"], teams[t]["Drop"], teams[t].total, teams[t].revenue, teams[t].openRev]),
       ["Grand Total", grand["In Progress"], grand["Win"], grand["Lost"], grand["Drop"], P.length],
       [],
-      ["สรุป Presales × สถานะ"],
-      ["Presales", "In Progress", "Win", "Lost", "Drop", "รวม", "มูลค่าเปิด", "มูลค่าปิด"],
+      ["Presales × Status"],
+      ["Presales", "In Progress", "Win", "Lost", "Drop", "Total", "Open Value", "Closed Value"],
       ...Object.keys(presales).sort((a, b) => presales[b].total - presales[a].total)
         .map(u => [u, presales[u]["In Progress"], presales[u]["Win"], presales[u]["Lost"], presales[u]["Drop"], presales[u].total, presales[u].openRev, presales[u].closedRev]),
     ];
     PT.download(`pipeline-report-${periodMode === "all" ? "all" : periodValue}-${new Date().toISOString().slice(0, 10)}.csv`, "\uFEFF" + PT.toCSV(rows), "text/csv;charset=utf-8");
-    PT.toast("ส่งออกรายงานแล้ว");
+    PT.toast("Report exported");
   }
 
   return { render, _setPeriod: (m, v) => { periodMode = m; periodValue = v; } };

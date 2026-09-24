@@ -101,7 +101,7 @@ const ExcelSync = (() => {
     if (!PT.state || !PT.state.projects || !PT.state.projects.length) return;
 
     if (!window.showSaveFilePicker) {
-      setStatus(`เบราว์เซอร์นี้เขียนทับไฟล์อัตโนมัติไม่ได้ — กด "บันทึก Excel" เพื่อดาวน์โหลด ${todayFileName()}`);
+      setStatus(`This browser can't auto-overwrite files — click "Save Excel" to download ${todayFileName()}`);
       return;
     }
 
@@ -114,14 +114,14 @@ const ExcelSync = (() => {
     if (rec && rec.date === today && rec.base === base && rec.handle) {
       handle = rec.handle;
       if (!(await ensurePermission(handle))) {
-        setStatus("รอสิทธิ์เขียนไฟล์ — ลองบันทึกอีกครั้ง");
+        setStatus("Waiting for file write permission — try saving again");
         return;
       }
     }
 
     if (!handle) {
       if (!canPrompt) {
-        setStatus(`ยังไม่ได้เชื่อมไฟล์ — กด "บันทึก Excel" เพื่อเลือกที่ตั้งไฟล์ ${todayFileName()}`);
+        setStatus(`No file linked yet — click "Save Excel" to pick where ${todayFileName()} should go`);
         return;
       }
       try {
@@ -133,7 +133,7 @@ const ExcelSync = (() => {
           }],
         });
       } catch (e) {
-        setStatus("ยกเลิกการเลือกไฟล์ — ข้อมูลยังเก็บในเบราว์เซอร์");
+        setStatus("File selection cancelled — data is still saved in the browser");
         return;
       }
       await storeRec({ handle, date: today, base });
@@ -144,17 +144,17 @@ const ExcelSync = (() => {
       const w = await handle.createWritable();
       await w.write(bytes);
       await w.close();
-      setStatus(`บันทึก ${handle.name} แล้ว ${new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}`);
+      setStatus(`Saved ${handle.name} at ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`);
     } catch (e) {
-      setStatus("เขียนไฟล์ไม่สำเร็จ: " + (e.message || e));
+      setStatus("Failed to write file: " + (e.message || e));
     }
   }
 
-  /* fallback: ดาวน์โหลด (ไม่มี File System Access API) */
+  /* fallback: download (no File System Access API) */
   function downloadToday() {
     PT.download(todayFileName(), buildWorkbook(),
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    setStatus(`ดาวน์โหลด ${todayFileName()} แล้ว — เลือกบันทึกทับไฟล์ของวันนี้ได้`);
+    setStatus(`Downloaded ${todayFileName()} — you can overwrite today's file with it`);
   }
 
   function manualSave() {

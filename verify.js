@@ -71,7 +71,7 @@ check("quarter buckets populated", Object.keys(qb).length >= 5, Object.keys(qb))
 const wk = PT.weekKey(new Date(2026, 8, 23)); // Wed 23 Sep 2026
 check("weekKey is Monday 21 Sep 2026", wk === "2026-09-21", wk);
 check("addWeeks back", PT.addWeeks(wk, -1) === "2026-09-14", PT.addWeeks(wk, -1));
-check("weekKeyLabel renders Thai", /สัปดาห์/.test(PT.weekKeyLabel(wk)), PT.weekKeyLabel(wk));
+check("weekKeyLabel renders", /Week of/.test(PT.weekKeyLabel(wk)), PT.weekKeyLabel(wk));
 
 /* --- record week change + diff --- */
 const p0 = P[0];
@@ -95,7 +95,7 @@ check("history persisted", Array.isArray(saved.history[p0.id]) && saved.history[
 check("csv escapes quotes/commas", PT.toCSV([['a"b', "c,d"]]) === '"a""b","c,d"', PT.toCSV([['a"b', "c,d"]]));
 
 /* --- fmtBaht --- */
-check("fmtBaht millions", PT.fmtBaht(30000000) === "30 ล้าน", PT.fmtBaht(30000000));
+check("fmtBaht millions", PT.fmtBaht(30000000) === "30M", PT.fmtBaht(30000000));
 check("fmtBaht null", PT.fmtBaht(null) === "—");
 
 console.log(fails ? `\n${fails} FAILURES` : "\nALL CHECKS PASSED");

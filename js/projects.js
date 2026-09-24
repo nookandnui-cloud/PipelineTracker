@@ -1,4 +1,4 @@
-/* projects.js — ตารางโปรเจกต์ทั้งหมด + drawer รายละเอียด/แก้ไข */
+/* projects.js — full project table + detail/edit drawer */
 "use strict";
 
 const Projects = (() => {
@@ -10,31 +10,31 @@ const Projects = (() => {
     const presalesList = [...new Set(PT.projects().map(p => p.presales).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th"));
     view.innerHTML = `
       <div class="view-head">
-        <h1>โปรเจกต์ทั้งหมด</h1>
+        <h1>All Projects</h1>
         <span class="sub" id="pjCount"></span>
         <span class="spacer"></span>
-        <button class="btn small" id="pjExport">ส่งออก CSV</button>
-        <button class="btn primary small" id="pjAdd">+ เพิ่มโปรเจกต์</button>
+        <button class="btn small" id="pjExport">Export CSV</button>
+        <button class="btn primary small" id="pjAdd">+ Add Project</button>
       </div>
       <div class="card">
         <div class="filters">
-          <label>ทีม</label>
-          <select id="pTeam"><option value="">ทั้งหมด</option>${PT.TEAM_ORDER.map(t => `<option ${teamFilter === t ? "selected" : ""}>${t}</option>`).join("")}</select>
-          <label>สถานะ</label>
-          <select id="pStatus"><option value="">ทั้งหมด</option>${PT.STATUSES.map(s => `<option ${statusFilter === s ? "selected" : ""}>${s}</option>`).join("")}</select>
+          <label>Team</label>
+          <select id="pTeam"><option value="">All</option>${PT.TEAM_ORDER.map(t => `<option ${teamFilter === t ? "selected" : ""}>${t}</option>`).join("")}</select>
+          <label>Status</label>
+          <select id="pStatus"><option value="">All</option>${PT.STATUSES.map(s => `<option ${statusFilter === s ? "selected" : ""}>${s}</option>`).join("")}</select>
           <label>Presales</label>
-          <select id="pPresales"><option value="">ทั้งหมด</option>${presalesList.map(u => `<option ${presalesFilter === u ? "selected" : ""}>${PT.esc(u)}</option>`).join("")}</select>
+          <select id="pPresales"><option value="">All</option>${presalesList.map(u => `<option ${presalesFilter === u ? "selected" : ""}>${PT.esc(u)}</option>`).join("")}</select>
           <label>Target</label>
-          <select id="pQuarter"><option value="">ทั้งหมด</option>${PT.quarters().map(q => `<option ${qFilter === q ? "selected" : ""}>${q}</option>`).join("")}</select>
-          <label>ค้นหา</label>
-          <input type="search" id="pSearch" placeholder="ชื่อ / ลูกค้า / code / product…" value="${PT.esc(searchQ)}">
+          <select id="pQuarter"><option value="">All</option>${PT.quarters().map(q => `<option ${qFilter === q ? "selected" : ""}>${q}</option>`).join("")}</select>
+          <label>Search</label>
+          <input type="search" id="pSearch" placeholder="Name / customer / code / product…" value="${PT.esc(searchQ)}">
         </div>
         <div class="tbl-wrap" style="max-height:calc(100vh - 230px)">
           <table class="tbl">
             <thead><tr>
-              ${[["team", "ทีม"], ["code", "Code"], ["name", "โปรเจกต์"], ["customer", "ลูกค้า"],
-                 ["sales", "Sales"], ["presales", "Presales"], ["target", "Target"], ["revenue", "มูลค่า"],
-                 ["progressPct", "คืบหน้า"], ["winPct", "% Win"], ["status", "สถานะ"]].map(([k, l]) =>
+              ${[["team", "Team"], ["code", "Code"], ["name", "Project"], ["customer", "Customer"],
+                 ["sales", "Sales"], ["presales", "Presales"], ["target", "Target"], ["revenue", "Value"],
+                 ["progressPct", "Progress"], ["winPct", "% Win"], ["status", "Status"]].map(([k, l]) =>
                 `<th class="sortable" data-k="${k}">${l}<span class="arrow"></span></th>`).join("")}
             </tr></thead>
             <tbody id="pjBody"></tbody>
@@ -85,8 +85,8 @@ const Projects = (() => {
     const tbody = document.getElementById("pjBody");
     if (!tbody) return;
     const P = filtered();
-    document.getElementById("pjCount").textContent = `${P.length} จาก ${PT.projects().length} โปรเจกต์`;
-    if (!P.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty">ไม่พบโปรเจกต์ตามเงื่อนไข</div></td></tr>`; return; }
+    document.getElementById("pjCount").textContent = `${P.length} of ${PT.projects().length} projects`;
+    if (!P.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty">No projects match the filters</div></td></tr>`; return; }
 
     tbody.innerHTML = P.map(p => `<tr data-id="${p.id}">
       <td><span class="team-chip team-${p.team}">${p.team || "—"}</span></td>
@@ -113,7 +113,7 @@ const Projects = (() => {
     const rows = [["Team", "Project code", "Sales", "Presales", "Customer", "Start", "Target", "Project name", "Revenue", "Product", "%progress", "%win", "Win/Lost/Drop", "Status", "Action"]];
     filtered().forEach(p => rows.push([p.team, p.code, p.sales, p.presales, p.customer, p.start, p.target, p.name, p.revenue ?? "", p.product, p.progressPct, p.winPct, p.status, p.statusNote, p.action]));
     PT.download("pipeline-projects.csv", "\uFEFF" + PT.toCSV(rows), "text/csv;charset=utf-8");
-    PT.toast("ส่งออก CSV แล้ว");
+    PT.toast("CSV exported");
   }
 
   /* ================= drawer ================= */
@@ -133,54 +133,54 @@ const Projects = (() => {
     dw.innerHTML = `
       <div class="drawer-head">
         <div>
-          <h3>${isNew ? "เพิ่มโปรเจกต์ใหม่" : PT.esc(p.name || "(ไม่มีชื่อ)")}</h3>
-          <div class="sub">${isNew ? "กรอกข้อมูลแล้วกดบันทึก" : `${p.code ? PT.esc(p.code) + " · " : ""}${PT.esc(p.customer || "")}`}</div>
+          <h3>${isNew ? "New Project" : PT.esc(p.name || "(unnamed)")}</h3>
+          <div class="sub">${isNew ? "Fill in the details and save" : `${p.code ? PT.esc(p.code) + " · " : ""}${PT.esc(p.customer || "")}`}</div>
         </div>
         <button class="close" id="dwClose">✕</button>
       </div>
       <div class="drawer-body">
         <form class="frm" id="dwForm" autocomplete="off">
-          <div class="row"><label>ทีม</label>
+          <div class="row"><label>Team</label>
             <select name="team">${PT.TEAM_ORDER.map(t => `<option ${p.team === t ? "selected" : ""}>${t}</option>`).join("")}</select></div>
           <div class="row"><label>Project code</label><input name="code" value="${PT.esc(p.code || "")}"></div>
-          <div class="row"><label>ชื่อโปรเจกต์</label><input name="name" required value="${PT.esc(p.name || "")}"></div>
-          <div class="row"><label>ลูกค้า</label><input name="customer" value="${PT.esc(p.customer || "")}"></div>
+          <div class="row"><label>Project name</label><input name="name" required value="${PT.esc(p.name || "")}"></div>
+          <div class="row"><label>Customer</label><input name="customer" value="${PT.esc(p.customer || "")}"></div>
           <div class="row"><label>Sales</label><input name="sales" value="${PT.esc(p.sales || "")}"></div>
           <div class="row"><label>Presales</label><input name="presales" value="${PT.esc(p.presales || "")}"></div>
           <div class="row"><label>Start</label>
             <select name="start"><option value="">—</option>${PT.quarters().map(q => `<option ${p.start === q ? "selected" : ""}>${q}</option>`).join("")}</select></div>
           <div class="row"><label>Target</label>
             <select name="target"><option value="">—</option>${PT.quarters().map(q => `<option ${p.target === q ? "selected" : ""}>${q}</option>`).join("")}</select></div>
-          <div class="row"><label>Revenue (บาท)</label><input name="revenue" type="number" min="0" step="1000" value="${p.revenue ?? ""}"></div>
+          <div class="row"><label>Revenue (THB)</label><input name="revenue" type="number" min="0" step="1000" value="${p.revenue ?? ""}"></div>
           <div class="row"><label>Product</label><input name="product" value="${PT.esc(p.product || "")}"></div>
-          <div class="row"><label>% ความคืบหน้า</label><input name="progressPct" type="number" min="0" max="100" step="5" value="${p.progressPct ?? 0}"></div>
+          <div class="row"><label>% Progress</label><input name="progressPct" type="number" min="0" max="100" step="5" value="${p.progressPct ?? 0}"></div>
           <div class="row"><label>% Win</label><input name="winPct" type="number" min="0" max="100" step="5" value="${p.winPct ?? 0}"></div>
-          <div class="row"><label>สถานะ</label>
+          <div class="row"><label>Status</label>
             <select name="status">${PT.STATUSES.map(s => `<option ${p.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></div>
-          <div class="row wide"><label>Status note (จาก Excel)</label>
+          <div class="row wide"><label>Status note (from Excel)</label>
             <textarea name="statusNote">${PT.esc(p.statusNote || "")}</textarea></div>
-          <div class="row wide"><label>Action / ขั้นตอนถัดไป</label>
+          <div class="row wide"><label>Action / Next steps</label>
             <textarea name="action">${PT.esc(p.action || "")}</textarea></div>
         </form>
 
         ${!isNew && hist.length ? `
         <div style="margin-top:18px">
           <div class="card-head" style="padding:8px 0;border-bottom:1px solid var(--border)">
-            <h2>ประวัติรายสัปดาห์</h2>
+            <h2>Weekly History</h2>
           </div>
           <ul class="timeline" style="margin-top:10px">
             ${hist.map(r => `
               <li class="t-${r.status.replace(" ", "")}">
-                <div class="t-date">${PT.weekKeyLabel(r.week)} · <span class="badge st-${r.status.replace(" ", "")}">${r.status}</span> · คืบหน้า ${r.progressPct}% · win ${r.winPct}%</div>
+                <div class="t-date">${PT.weekKeyLabel(r.week)} · <span class="badge st-${r.status.replace(" ", "")}">${r.status}</span> · progress ${r.progressPct}% · win ${r.winPct}%</div>
                 ${r.note ? `<div class="t-note">${PT.esc(r.note)}</div>` : ""}
               </li>`).join("")}
           </ul>
         </div>` : ""}
       </div>
       <div class="drawer-foot">
-        ${!isNew ? `<button class="btn ghost" id="dwDelete" style="margin-right:auto;color:var(--lost)">ลบโปรเจกต์</button>` : ""}
-        <button class="btn" id="dwCancel">ยกเลิก</button>
-        <button class="btn primary" id="dwSave">บันทึก</button>
+        ${!isNew ? `<button class="btn ghost" id="dwDelete" style="margin-right:auto;color:var(--lost)">Delete Project</button>` : ""}
+        <button class="btn" id="dwCancel">Cancel</button>
+        <button class="btn primary" id="dwSave">Save</button>
       </div>`;
 
     bd.hidden = false; dw.hidden = false;
@@ -190,7 +190,7 @@ const Projects = (() => {
     document.getElementById("dwSave").onclick = () => saveDrawer(isNew, p.id);
     const del = document.getElementById("dwDelete");
     if (del) del.onclick = () => {
-      if (!confirm("ลบโปรเจกต์นี้?")) return;
+      if (!confirm("Delete this project?")) return;
       const st = PT.state;
       st.projects = st.projects.filter(x => x.id !== p.id);
       delete st.history[p.id];
@@ -198,13 +198,13 @@ const Projects = (() => {
       ExcelSync.requestSync(false);
       closeDrawer();
       App.render();
-      PT.toast("ลบแล้ว");
+      PT.toast("Deleted");
     };
   }
 
   function saveDrawer(isNew, id) {
     const f = document.getElementById("dwForm");
-    if (!f.name.value.trim()) { PT.toast("กรุณากรอกชื่อโปรเจกต์"); return; }
+    if (!f.name.value.trim()) { PT.toast("Please enter a project name"); return; }
     let p;
     if (isNew) {
       p = { id, register: "", startDate: null };
@@ -226,7 +226,7 @@ const Projects = (() => {
     ExcelSync.requestSync(false);
     closeDrawer();
     App.render();
-    PT.toast(isNew ? "เพิ่มโปรเจกต์แล้ว" : "บันทึกแล้ว");
+    PT.toast(isNew ? "Project added" : "Saved");
   }
 
   function closeDrawer() {

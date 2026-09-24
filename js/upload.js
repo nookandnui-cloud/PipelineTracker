@@ -117,9 +117,9 @@ const Upload = (() => {
       });
       sheetName = best;
     }
-    if (!sheetName) throw new Error("ไม่พบ sheet ที่มีข้อมูล pipeline (ลองเช็คว่าไฟล์มี sheet เช่น Pipeline2026)");
+    if (!sheetName) throw new Error("No pipeline sheet found (check that the file has a sheet like Pipeline2026)");
     const { rows, headerRow, col } = findColumns(wb.Sheets[sheetName]);
-    if (headerRow < 0) throw new Error("ไม่พบหัวคอลัมน์ 'Project name' และ 'Win/Lost/Drop' ใน sheet " + sheetName);
+    if (headerRow < 0) throw new Error("Could not find 'Project name' and 'Win/Lost/Drop' headers in sheet " + sheetName);
 
     const projects = [];
     let n = 0;
@@ -142,7 +142,7 @@ const Upload = (() => {
         action: clean(g("action")),
       });
     }
-    if (!projects.length) throw new Error("อ่านได้ 0 โปรเจกต์จาก sheet " + sheetName + " — เช็ครูปแบบไฟล์");
+    if (!projects.length) throw new Error("Parsed 0 projects from sheet " + sheetName + " — check the file format");
     return { sheetName, projects };
   }
 
@@ -181,18 +181,18 @@ const Upload = (() => {
     const errEl = document.getElementById("landingError");
     errEl.hidden = true;
     if (!/\.(xlsx|xls)$/i.test(file.name)) {
-      return showError("รองรับเฉพาะไฟล์ .xlsx / .xls เท่านั้น");
+      return showError("Only .xlsx / .xls files are supported");
     }
     const reader = new FileReader();
-    reader.onerror = () => showError("อ่านไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง");
+    reader.onerror = () => showError("Could not read the file — please try again");
     reader.onload = () => {
       try {
         const { sheetName, projects } = parseWorkbook(new Uint8Array(reader.result));
         PT.ingest(projects, file.name, sheetName);
         App.enterApp();
-        PT.toast(`โหลด ${projects.length} โปรเจกต์จาก ${file.name} (${sheetName}) แล้ว`);
+        PT.toast(`Loaded ${projects.length} projects from ${file.name} (${sheetName})`);
       } catch (e) {
-        showError(e.message || "ไฟล์นี้อ่านไม่ได้ — ตรวจสอบว่าเป็น Excel ที่มี sheet pipeline");
+        showError(e.message || "Could not parse this file — make sure it is an Excel file with a pipeline sheet");
       }
     };
     reader.readAsArrayBuffer(file);

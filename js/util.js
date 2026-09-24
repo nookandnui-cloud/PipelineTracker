@@ -31,7 +31,7 @@ const PT = (() => {
   function weekLabel(d) {
     const m = mondayOf(d);
     const s = new Date(m); s.setDate(s.getDate() + 6);
-    return `สัปดาห์ ${fmtShort(m)} – ${fmtShort(s)}`;
+    return `Week of ${fmtShort(m)} – ${fmtShort(s)}`;
   }
   function weekKeyLabel(key) {
     const [y, m, d] = key.split("-").map(Number);
@@ -69,7 +69,7 @@ const PT = (() => {
   /* ---------- formatting ---------- */
   function fmtBaht(n) {
     if (n == null) return "—";
-    if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + " ล้าน";
+    if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + "M";
     return n.toLocaleString("th-TH");
   }
   function fmtBahtFull(n) {
@@ -131,9 +131,9 @@ const PT = (() => {
   function save() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(state));
-      setSaveState("บันทึกแล้ว " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }));
+      setSaveState("Saved " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
     } catch (e) {
-      setSaveState("บันทึกไม่สำเร็จ (พื้นที่จำกัด)");
+      setSaveState("Save failed (storage limit)");
     }
   }
   function queueSave() {

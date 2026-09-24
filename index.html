@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MFEC Pipeline Tracker — Weekly</title>
+<title>MFEC Pipeline Tracker</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,29 +15,30 @@
       <div class="brand-mark">MF</div>
       <div>
         <div class="brand-name">Pipeline Tracker</div>
-        <div class="brand-sub">System Team · Weekly</div>
+        <div class="brand-sub">System Team · Weekly Tracker</div>
       </div>
     </div>
 
-    <h1 class="landing-title">ติดตาม Pipeline รายสัปดาห์<br>เริ่มจากไฟล์ Excel ของคุณ</h1>
-    <p class="landing-sub">อัปโหลดไฟล์ <b>.xlsx</b> (sheet <b>Pipeline2026</b>) ระบบจะอ่านข้อมูล แปลงสถานะ/ทีม/ไตรมาสให้สะอาด
-    แล้วเข้าสู่หน้า Dashboard ได้ทันที — ข้อมูลอยู่ในเครื่องคุณเท่านั้น ไม่มีการส่งขึ้น server</p>
+    <h1 class="landing-title">Track Your Pipeline Weekly<br>Start From Your Excel File</h1>
+    <p class="landing-sub">Upload an <b>.xlsx</b> file (sheet <b>Pipeline2026</b>). The app reads your data,
+    cleans up teams/statuses/quarters, and takes you straight to the dashboard —
+    everything stays on your machine, nothing is sent to any server.</p>
 
     <div class="upload-card" id="dropZone">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 16V4m0 0L7 9m5-5 5 5" stroke="#c8102e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="#c8102e" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
-      <div class="upload-title">ลากไฟล์ .xlsx มาวางที่นี่</div>
-      <div class="upload-sub">หรือ</div>
-      <button class="btn primary" id="btnBrowse">เลือกไฟล์จากเครื่อง</button>
+      <div class="upload-title">Drag &amp; drop your .xlsx file here</div>
+      <div class="upload-sub">or</div>
+      <button class="btn primary" id="btnBrowse">Browse files</button>
       <input type="file" id="fileInput" accept=".xlsx,.xls" hidden>
-      <div class="upload-hint">รองรับไฟล์เช่น <span class="code">Pipeline system team.xlsx</span></div>
+      <div class="upload-hint">Works with files like <span class="code">Pipeline system team.xlsx</span></div>
     </div>
 
     <div class="landing-foot">
       <span id="landingError" class="landing-error" hidden></span>
-      <button class="btn ghost small" id="btnContinue" hidden>เข้าสู่ Dashboard ด้วยข้อมูลเดิม →</button>
+      <button class="btn ghost small" id="btnContinue" hidden>Continue to dashboard →</button>
       <div class="landing-credit">Inspired by Aphinat Tiyasuwan</div>
     </div>
   </div>
@@ -50,20 +51,20 @@
     <div class="brand-mark">MF</div>
     <div>
       <div class="brand-name">Pipeline Tracker</div>
-      <div class="brand-sub" id="dataMeta">System Team · Weekly</div>
+      <div class="brand-sub" id="dataMeta">System Team · Weekly Tracker</div>
     </div>
   </div>
   <nav class="nav" id="mainNav">
-    <button data-view="dashboard" class="active">ภาพรวม</button>
-    <button data-view="projects">โปรเจกต์</button>
-    <button data-view="report">รายงาน</button>
+    <button data-view="dashboard" class="active">Dashboard</button>
+    <button data-view="projects">Projects</button>
+    <button data-view="report">Report</button>
   </nav>
   <div class="topbar-right">
     <span class="muted small" id="syncState"></span>
     <span class="muted small" id="saveState"></span>
-    <button class="btn ghost small" id="btnExcelSave" title="บันทึกข้อมูลปัจจุบันเป็นไฟล์ Excel รายวัน">บันทึก Excel</button>
-    <button class="btn ghost small" id="btnChangeFile" title="อัปโหลดไฟล์ Excel ใหม่">เปลี่ยนไฟล์</button>
-    <button class="btn ghost small" id="btnReset" title="ล้างการแก้ไขทั้งหมด กลับไปที่ข้อมูล Excel ล่าสุดที่อัปโหลด">รีเซ็ตข้อมูล</button>
+    <button class="btn ghost small" id="btnExcelSave" title="Save current data as a daily Excel file">Save Excel</button>
+    <button class="btn ghost small" id="btnChangeFile" title="Upload a new Excel file">Change File</button>
+    <button class="btn ghost small" id="btnReset" title="Discard all edits and restore the last uploaded Excel data">Reset Data</button>
   </div>
 </header>
 
@@ -72,7 +73,7 @@
 
 <!-- project drawer -->
 <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
-<aside class="drawer" id="drawer" hidden aria-label="รายละเอียดโปรเจกต์"></aside>
+<aside class="drawer" id="drawer" hidden aria-label="Project details"></aside>
 
 <div class="toast" id="toast" hidden></div>
 

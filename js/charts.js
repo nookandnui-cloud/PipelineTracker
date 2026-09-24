@@ -63,7 +63,7 @@ const Charts = (() => {
     const statuses = ["In Progress", "Win", "Lost", "Drop"];
     const colors = { "In Progress": "#3b82f6", "Win": "#22c55e", "Lost": "#ef4444", "Drop": "#f59e0b" };
     const keys = quarterKeys.filter(q => buckets[q]);
-    if (!keys.length) { container.innerHTML = `<div class="empty">ไม่มีข้อมูล</div>`; return; }
+    if (!keys.length) { container.innerHTML = `<div class="empty">No data</div>`; return; }
     const max = Math.max(1, ...keys.map(q => statuses.reduce((s, st) => s + (buckets[q][st] || 0), 0)));
     const W = 540, rowH = 26, padL = 52, padR = 14, totW = 20, padT = 4;
     const H = padT + keys.length * rowH;
@@ -104,7 +104,7 @@ const Charts = (() => {
     const entries = Object.entries(counts).filter(([, v]) => v > 0);
     const total = entries.reduce((s, [, v]) => s + v, 0);
     const colors = { "In Progress": "#3b82f6", "Win": "#22c55e", "Lost": "#ef4444", "Drop": "#f59e0b" };
-    if (!total) { container.innerHTML = `<div class="empty">ไม่มีข้อมูล</div>`; return; }
+    if (!total) { container.innerHTML = `<div class="empty">No data</div>`; return; }
 
     const R = 15.9;
     const svg = el("svg", { viewBox: "0 0 42 42", width: opts.size || 118, height: opts.size || 118 });
@@ -125,7 +125,7 @@ const Charts = (() => {
     const t1 = el("text", { x: 21, y: 20.5, "text-anchor": "middle", "font-size": 8, "font-weight": 800, fill: "#1a2233" });
     t1.textContent = total;
     const t2 = el("text", { x: 21, y: 27, "text-anchor": "middle", "font-size": 3.4, fill: "#64748b" });
-    t2.textContent = opts.centerLabel || "โปรเจกต์";
+    t2.textContent = opts.centerLabel || "projects";
     svg.appendChild(t1); svg.appendChild(t2);
 
     container.innerHTML = "";

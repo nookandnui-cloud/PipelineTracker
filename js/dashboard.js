@@ -1,4 +1,4 @@
-/* dashboard.js — ภาพรวม: KPI, team chart, quarter timeline, top projects */
+/* dashboard.js — overview: KPIs, team chart, quarter timeline, top projects */
 "use strict";
 
 const Dashboard = (() => {
@@ -23,25 +23,25 @@ const Dashboard = (() => {
 
     view.innerHTML = `
       <div class="view-head">
-        <h1>ภาพรวม Pipeline</h1>
-        <span class="sub">${total} โปรเจกต์ · อัปเดตล่าสุดจาก Excel ${PT.esc((window.PIPELINE_SEED && window.PIPELINE_SEED.generatedAt || "").slice(0, 10))}</span>
+        <h1>Pipeline Overview</h1>
+        <span class="sub">${total} projects · seeded from Excel ${PT.esc((window.PIPELINE_SEED && window.PIPELINE_SEED.generatedAt || "").slice(0, 10))}</span>
         <span class="spacer"></span>
         <div class="seg" id="dashTeamSeg">
-          <button data-team="" class="on">ทุกทีม</button>
+          <button data-team="" class="on">All Teams</button>
           ${PT.TEAM_ORDER.filter(t => teams[t]).map(t => `<button data-team="${t}">${t}</button>`).join("")}
         </div>
       </div>
 
       <div class="grid cols-4" style="margin-bottom:14px">
-        ${kpi("โปรเจกต์ทั้งหมด", total, `${prog} กำลังดำเนินการ`, "")}
-        ${kpi("Win", win, PT.fmtBaht(winRev) + " บาท", "up")}
-        ${kpi("Lost / Drop", lost + drop, `อัตราชนะ ${total ? Math.round(win / (win + lost + drop || 1) * 100) : 0}%`, "down")}
-        ${kpi("มูลค่า Pipeline เปิด", PT.fmtBaht(openRev), `รวมทั้งหมด ${PT.fmtBaht(allRev)}`, "")}
+        ${kpi("Total Projects", total, `${prog} in progress`, "")}
+        ${kpi("Win", win, PT.fmtBaht(winRev) + " THB", "up")}
+        ${kpi("Lost / Drop", lost + drop, `Win rate ${total ? Math.round(win / (win + lost + drop || 1) * 100) : 0}%`, "down")}
+        ${kpi("Open Pipeline Value", PT.fmtBaht(openRev), `Grand total ${PT.fmtBaht(allRev)}`, "")}
       </div>
 
       <div class="grid cols-2" style="margin-bottom:14px">
         <div class="card">
-          <div class="card-head"><h2>สถานะแยกตามทีม</h2><span class="spacer"></span>
+          <div class="card-head"><h2>Status by Team</h2><span class="spacer"></span>
             <div class="legend">
               ${["In Progress", "Win", "Lost", "Drop"].map(s => `<span class="li"><span class="sw" style="background:${PT.STATUS_COLOR[s]}"></span>${s}</span>`).join("")}
             </div>
@@ -49,23 +49,23 @@ const Dashboard = (() => {
           <div class="card-body" id="dashTeamChart"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>ไทม์ไลน์ตาม Target Quarter</h2></div>
+          <div class="card-head"><h2>Target Quarter Timeline</h2></div>
           <div class="card-body" id="dashQChart"></div>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
-        <div class="card-head"><h2>โปรเจกต์มูลค่าสูงสุด (เปิดอยู่)</h2></div>
+        <div class="card-head"><h2>Top Open Projects by Value</h2></div>
         <div class="tbl-wrap" id="dashTop"></div>
       </div>
 
       <div class="grid cols-2">
         <div class="card">
-          <div class="card-head"><h2>เดือน/ไตรมาสถัดไปที่ต้องเฝ้าระวัง</h2></div>
+          <div class="card-head"><h2>Watchlist: Next Quarter &amp; Overdue</h2></div>
           <div class="card-body" id="dashWatch"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>สัดส่วนสถานะ</h2></div>
+          <div class="card-head"><h2>Status Breakdown</h2></div>
           <div class="card-body" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
             <div id="dashDonut"></div>
             <div id="dashDonutLegend"></div>
@@ -97,7 +97,7 @@ const Dashboard = (() => {
             <td class="num strong">${PT.fmtBaht(p.revenue)}</td>
             <td>${progressBar(p.progressPct, "prog")}</td>
           </tr>`).join("")}</tbody></table>`
-      : `<div class="empty">ไม่มีโปรเจกต์ที่ target ใกล้ถึงกำหนด</div>`;
+      : `<div class="empty">No projects with a near-term target</div>`;
 
     Charts.donut(document.getElementById("dashDonut"), {
       "In Progress": prog, "Win": win, "Lost": lost, "Drop": drop,
@@ -138,11 +138,11 @@ const Dashboard = (() => {
   }
 
   function topTable(rows) {
-    if (!rows.length) return `<div class="empty">ไม่มีข้อมูล</div>`;
+    if (!rows.length) return `<div class="empty">No data</div>`;
     return `<table class="tbl">
       <thead><tr>
-        <th>ทีม</th><th>โปรเจกต์</th><th>ลูกค้า</th><th>Target</th>
-        <th class="num">มูลค่า</th><th>ความคืบหน้า</th><th>% Win</th><th>สถานะ</th>
+        <th>Team</th><th>Project</th><th>Customer</th><th>Target</th>
+        <th class="num">Value</th><th>Progress</th><th>% Win</th><th>Status</th>
       </tr></thead>
       <tbody>${rows.map(p => `
         <tr data-id="${p.id}">

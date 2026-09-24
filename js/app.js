@@ -25,12 +25,12 @@ const App = (() => {
     document.getElementById("btnReset").onclick = () => {
       const src = PT.state && PT.state.source;
       const msg = src
-        ? `รีเซ็ตกลับไปที่ข้อมูลจากไฟล์ "${src.fileName}" (${src.count} โปรเจกต์)? การแก้ไข/ประวัติรายสัปดาห์ทั้งหมดจะถูกล้าง`
-        : "รีเซ็ตข้อมูลทั้งหมด? การแก้ไขทั้งหมดในเว็บจะหาย";
+        ? `Reset to the data from "${src.fileName}" (${src.count} projects)? All edits and weekly history will be cleared`
+        : "Reset all data? Every edit made in this app will be lost";
       if (!confirm(msg)) return;
       PT.reset();
       render();
-      PT.toast("รีเซ็ตข้อมูลแล้ว");
+      PT.toast("Data reset");
     };
 
     /* state เก่าจาก localStorage: เข้าแอปเลย; ไม่งั้นอยู่หน้า landing รออัปโหลด */
@@ -47,9 +47,9 @@ const App = (() => {
     const st = PT.state;
     const meta = document.getElementById("dataMeta");
     if (st.source) {
-      meta.textContent = `${st.source.sheetName} · ${st.source.fileName} · ${st.projects.length} โปรเจกต์ · อัปโหลด ${st.source.ingestedAt.slice(0, 10)}`;
+      meta.textContent = `${st.source.sheetName} · ${st.source.fileName} · ${st.projects.length} projects · uploaded ${st.source.ingestedAt.slice(0, 10)}`;
     } else {
-      meta.textContent = `System Team · ${st.projects.length} โปรเจกต์`;
+      meta.textContent = `System Team · ${st.projects.length} projects`;
     }
     render();
   }
