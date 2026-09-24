@@ -1,0 +1,71 @@
+/* app.js — bootstrap, landing→app flow, routing */
+"use strict";
+
+const App = (() => {
+  let view = "dashboard";
+
+  function boot() {
+    Upload.init();
+
+    document.getElementById("mainNav").addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      view = b.dataset.view;
+      document.querySelectorAll("#mainNav button").forEach(x => x.classList.toggle("active", x === b));
+      render();
+    });
+
+    document.getElementById("btnExcelSave").onclick = () => ExcelSync.manualSave();
+
+    document.getElementById("btnChangeFile").onclick = () => {
+      document.getElementById("app").hidden = true;
+      document.getElementById("landing").hidden = false;
+    };
+
+    document.getElementById("btnReset").onclick = () => {
+      const src = PT.state && PT.state.source;
+      const msg = src
+        ? `รีเซ็ตกลับไปที่ข้อมูลจากไฟล์ "${src.fileName}" (${src.count} โปรเจกต์)? การแก้ไข/ประวัติรายสัปดาห์ทั้งหมดจะถูกล้าง`
+        : "รีเซ็ตข้อมูลทั้งหมด? การแก้ไขทั้งหมดในเว็บจะหาย";
+      if (!confirm(msg)) return;
+      PT.reset();
+      render();
+      PT.toast("รีเซ็ตข้อมูลแล้ว");
+    };
+
+    /* state เก่าจาก localStorage: เข้าแอปเลย; ไม่งั้นอยู่หน้า landing รออัปโหลด */
+    PT.load();
+    if (PT.state.source) {
+      enterApp();
+    }
+  }
+
+  function enterApp() {
+    document.getElementById("landing").hidden = true;
+    document.getElementById("app").hidden = false;
+
+    const st = PT.state;
+    const meta = document.getElementById("dataMeta");
+    if (st.source) {
+      meta.textContent = `${st.source.sheetName} · ${st.source.fileName} · ${st.projects.length} โปรเจกต์ · อัปโหลด ${st.source.ingestedAt.slice(0, 10)}`;
+    } else {
+      meta.textContent = `System Team · ${st.projects.length} โปรเจกต์`;
+    }
+    render();
+  }
+
+  function render() {
+    const host = document.getElementById("view");
+    if (view === "dashboard") Dashboard.render(host);
+    else if (view === "projects") Projects.render(host);
+    else Report.render(host);
+    window.scrollTo(0, 0);
+  }
+
+  function openDrawer(id) { Projects.openDrawer(id); }
+  function refreshBadges() { /* reserved */ }
+
+  document.addEventListener("DOMContentLoaded", boot);
+
+  return { render, openDrawer, refreshBadges, enterApp };
+})();
