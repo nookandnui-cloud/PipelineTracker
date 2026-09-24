@@ -14,9 +14,9 @@ spec:
     - -f
     - -v
     - -p
+    - "8080"
+    - -h
     - /data
-    - -c
-    - httpd.conf
     ports:
     - containerPort: 8080
       name: http
