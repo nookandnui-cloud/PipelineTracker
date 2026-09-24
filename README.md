@@ -107,15 +107,6 @@ node upload-test.js "../Pipeline system team.xlsx" # parse Excel จริง + 
 
 ## Deploy บน OpenShift
 
-### ข้อมูลการเชื่อมต่อ
-
-| รายการ | ค่า |
-|---|---|
-| Cluster API | `https://api.ailab.mfec.co.th:6443` |
-| Namespace | `mfec-pipeline-tools` |
-| Route URL | `https://pipeline-tracker-mfec-pipeline-tools.apps.ailab.mfec.co.th` |
-| User | `ocpadmin` |
-
 ### ขั้นตอน Deploy
 
 อ้างอิง pattern จาก **[nookandnui-cloud/VMTools](https://github.com/nookandnui-cloud/VMTools)** — ใช้ ConfigMap + Busybox httpd (ไม่ต้อง build Docker image)
