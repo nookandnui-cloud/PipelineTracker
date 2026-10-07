@@ -87,7 +87,7 @@ try {
   console.log("PASS presales filter + column ปรากฏในหน้าโปรเจกต์");
 } catch (e) { fails++; console.log("FAIL presales filter:", e.message); }
 
-/* report: period filter UI + filtering rules (by TARGET; no-Target always included) */
+/* report: period filter UI + filtering rules (by TARGET; no-Target excluded when filtered) */
 try {
   const h = makeEl("main");
   vm.runInContext("Report.render", sandbox)(h);
@@ -95,21 +95,21 @@ try {
   if (!html.includes('id="rpMode"')) throw new Error("mode buttons not found");
   if (!html.includes("Monthly") || !html.includes("Quarterly") || !html.includes("Yearly")) throw new Error("period mode buttons not found");
   if (!html.includes("by Target")) throw new Error("period bar should be labelled 'by Target'");
-  console.log("PASS report period filter UI present (mode: all, labelled by Target)");
+  if (html.includes("always included")) throw new Error("the 'always included' hint must be gone");
+  console.log("PASS report period filter UI present (mode: all, labelled by Target, no hint)");
 
-  /* Yearly 2025 by TARGET: keep projects whose target year is 2025 PLUS those without a Target */
+  /* Yearly 2025 by TARGET: keep ONLY projects whose target year is 2025 */
   const Report = vm.runInContext("Report", sandbox);
   vm.runInContext("void (Report._setPeriod && Report._setPeriod('year','2025'))", sandbox);
   const all = PT.projects();
   const isQ = t => /^Q[1-4]\/\d{4}$/.test(t || "");
-  const exp2025 = all.filter(p => (isQ(p.target) && p.target.endsWith("/2025")) || !isQ(p.target)).length;
+  const exp2025 = all.filter(p => isQ(p.target) && p.target.endsWith("/2025")).length;
   const h2 = makeEl("main");
   Report.render(h2);
-  const html2 = h2.innerHTML;
-  const m = /(\d+) projects/.exec(html2);
+  const m = /(\d+) projects/.exec(h2.innerHTML);
   const shown = m ? +m[1] : -1;
   if (shown !== exp2025) throw new Error(`target-year 2025 should show ${exp2025} but got ${shown}`);
-  console.log(`PASS report target-year 2025 shows ${shown} projects (target 2025 + all without Target)`);
+  console.log(`PASS report target-year 2025 shows ${shown} projects (target 2025 only)`);
 
   /* Quarterly by TARGET must match the target quarter exactly */
   vm.runInContext("void (Report._setPeriod && Report._setPeriod('quarter','Q3/2026'))", sandbox);
@@ -152,7 +152,7 @@ try {
   console.log("PASS dashboard period filter + Win/Drop value KPIs present");
 } catch (e) { fails++; console.log("FAIL dashboard period filter:", e.message); }
 
-/* inPeriod: filtering must use TARGET, and projects with no Target must never be filtered out */
+/* inPeriod: filtering uses TARGET; projects with no/invalid Target are EXCLUDED when a period is set */
 try {
   const withTarget = PT.projects().find(x => x.target === "Q1/2026");
   if (!withTarget) throw new Error("no Q1/2026 project to test");
@@ -160,16 +160,19 @@ try {
   if (PT.inPeriod(withTarget, { mode: "quarter", value: "Q3/2026" })) throw new Error("Q1/2026 project leaked into Q3/2026");
   if (!PT.inPeriod(withTarget, { mode: "year", value: "2026" })) throw new Error("Q1/2026 project excluded from year 2026");
   if (PT.inPeriod(withTarget, { mode: "year", value: "2025" })) throw new Error("Q1/2026 project leaked into year 2025");
+  if (!PT.inPeriod(withTarget, { mode: "all", value: "" })) throw new Error("project excluded in All mode");
 
   const p = { id: "TEST", name: "synthetic", target: null };
   for (const mode of ["month", "quarter", "year"]) {
-    if (!PT.inPeriod(p, { mode, value: mode === "month" ? "2025-01" : "Q3/2025" })) throw new Error(`no-Target project excluded in ${mode} mode`);
+    if (PT.inPeriod(p, { mode, value: mode === "month" ? "2025-01" : "Q3/2025" })) throw new Error(`no-Target project should be EXCLUDED in ${mode} mode`);
   }
   const bad = { id: "TEST2", name: "synthetic-bad", target: "Q2/202ุ6" };
   for (const mode of ["month", "quarter", "year"]) {
-    if (!PT.inPeriod(bad, { mode, value: "Q3/2025" })) throw new Error(`unparseable-Target project excluded in ${mode} mode`);
+    if (PT.inPeriod(bad, { mode, value: "Q3/2025" })) throw new Error(`unparseable-Target project should be EXCLUDED in ${mode} mode`);
   }
-  console.log("PASS period filter uses Target (exact quarter/year match) and always includes no-Target projects");
+  /* but they must still show up in All */
+  if (!PT.inPeriod(p, { mode: "all", value: "" })) throw new Error("no-Target project must appear in All mode");
+  console.log("PASS period filter uses Target; no/invalid Target is excluded when a period is selected (kept in All)");
 } catch (e) { fails++; console.log("FAIL inPeriod target rules:", e.message); }
 
 /* ExcelSync: สร้าง workbook ได้ + ชื่อไฟล์รายวัน */

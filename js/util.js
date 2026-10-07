@@ -68,7 +68,8 @@ const PT = (() => {
 
   /* ---------- period filter (shared by Dashboard + Report) ----------
      Filtering is based on the project's TARGET quarter (e.g. Q1/2026),
-     NOT the Start Date. Projects without a Target are always included. */
+     NOT the Start Date. Projects without a valid Target are EXCLUDED
+     whenever a period is selected (they only appear in "All"). */
   function periodDefaults() { return { mode: "all", value: "" }; }
 
   /* "Q3/2025" -> { q: 3, y: 2025 }, or null when not a valid quarter */
@@ -77,11 +78,11 @@ const PT = (() => {
     return m ? { q: +m[1], y: +m[2] } : null;
   }
 
-  /* Projects WITHOUT a Target are ALWAYS included (never excluded by period). */
+  /* Projects WITHOUT a valid Target are excluded once a period is selected. */
   function inPeriod(p, period) {
     if (!period || period.mode === "all" || !period.value) return true;
     const t = targetParts(p.target);
-    if (!t) return true;
+    if (!t) return false;
     if (period.mode === "quarter") return p.target === period.value;
     if (period.mode === "year") return String(t.y) === period.value;
     if (period.mode === "month") {

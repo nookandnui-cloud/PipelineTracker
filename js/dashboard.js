@@ -8,7 +8,7 @@ const Dashboard = (() => {
 
   function render(view) {
     const all = PT.projects();
-    /* period applies first, filtering by TARGET quarter (projects without a Target are always kept), then team */
+    /* period applies first, filtering by TARGET quarter (no/invalid Target excluded when a period is set), then team */
     const inPeriodList = all.filter(p => PT.inPeriod(p, period));
     const P = teamFilter ? inPeriodList.filter(p => p.team === teamFilter) : inPeriodList;
     const teams = PT.teamStatusMatrix(inPeriodList);
