@@ -1,14 +1,17 @@
-/* dashboard.js — overview: KPIs, team chart, quarter timeline, top projects */
+/* dashboard.js — overview: period filter, KPIs, team chart, quarter timeline, top projects */
 "use strict";
 
 const Dashboard = (() => {
 
   let teamFilter = "";
+  const period = PT.periodDefaults();
 
   function render(view) {
     const all = PT.projects();
-    const P = teamFilter ? all.filter(p => p.team === teamFilter) : all;
-    const teams = PT.teamStatusMatrix(all);
+    /* period applies first (projects with no Start Date are always kept), then team */
+    const inPeriodList = all.filter(p => PT.inPeriod(p, period));
+    const P = teamFilter ? inPeriodList.filter(p => p.team === teamFilter) : inPeriodList;
+    const teams = PT.teamStatusMatrix(inPeriodList);
     const qKeys = PT.quarters().filter(q => PT.quarterIndex(q) >= PT.quarterIndex("Q1/2026"));
     const qb = PT.quarterBuckets(P);
 
@@ -16,27 +19,43 @@ const Dashboard = (() => {
     const win = P.filter(p => p.status === "Win").length;
     const lost = P.filter(p => p.status === "Lost").length;
     const drop = P.filter(p => p.status === "Drop").length;
-    const prog = total - win - lost - drop;
+    const prog = P.filter(p => p.status === "In Progress").length;
+    /* value buckets — each strictly from its own status */
     const openRev = P.filter(p => p.status === "In Progress").reduce((s, p) => s + (p.revenue || 0), 0);
     const winRev = P.filter(p => p.status === "Win").reduce((s, p) => s + (p.revenue || 0), 0);
+    const lostRev = P.filter(p => p.status === "Lost").reduce((s, p) => s + (p.revenue || 0), 0);
+    const dropRev = P.filter(p => p.status === "Drop").reduce((s, p) => s + (p.revenue || 0), 0);
     const allRev = P.reduce((s, p) => s + (p.revenue || 0), 0);
 
     view.innerHTML = `
       <div class="view-head">
         <h1>Pipeline Overview</h1>
-        <span class="sub">${total} projects · seeded from Excel ${PT.esc((window.PIPELINE_SEED && window.PIPELINE_SEED.generatedAt || "").slice(0, 10))}</span>
+        <span class="sub">${total} projects · ${PT.periodLabel(period)}</span>
         <span class="spacer"></span>
         <div class="seg" id="dashTeamSeg">
-          <button data-team="" class="on">All Teams</button>
-          ${PT.TEAM_ORDER.filter(t => teams[t]).map(t => `<button data-team="${t}">${t}</button>`).join("")}
+          <button data-team="" class="${teamFilter === "" ? "on" : ""}">All Teams</button>
+          ${PT.TEAM_ORDER.filter(t => teams[t]).map(t => `<button data-team="${t}" class="${teamFilter === t ? "on" : ""}">${t}</button>`).join("")}
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="filters">
+          ${PT.periodBarHTML(period, all, "dash")}
         </div>
       </div>
 
       <div class="grid cols-4" style="margin-bottom:14px">
         ${kpi("Total Projects", total, `${prog} in progress`, "")}
+        ${kpi("Win Value", PT.fmtBaht(winRev), `${win} projects won`, "up")}
+        ${kpi("Drop Value", PT.fmtBaht(dropRev), `${drop} projects dropped`, "down")}
+        ${kpi("Open Value (In Progress)", PT.fmtBaht(openRev), `Grand total ${PT.fmtBaht(allRev)}`, "")}
+      </div>
+
+      <div class="grid cols-4" style="margin-bottom:14px">
         ${kpi("Win", win, PT.fmtBaht(winRev) + " THB", "up")}
-        ${kpi("Lost / Drop", lost + drop, `Win rate ${total ? Math.round(win / (win + lost + drop || 1) * 100) : 0}%`, "down")}
-        ${kpi("Open Pipeline Value", PT.fmtBaht(openRev), `Grand total ${PT.fmtBaht(allRev)}`, "")}
+        ${kpi("Lost", lost, PT.fmtBaht(lostRev) + " THB", "down")}
+        ${kpi("Drop", drop, PT.fmtBaht(dropRev) + " THB", "down")}
+        ${kpi("Win Rate", (total ? Math.round(win / (win + lost + drop || 1) * 100) : 0) + "%", `${win}W / ${lost}L / ${drop}D`, "")}
       </div>
 
       <div class="grid cols-2" style="margin-bottom:14px">
@@ -78,13 +97,12 @@ const Dashboard = (() => {
     Charts.quarterTimeline(document.getElementById("dashQChart"), qb, qKeys);
 
     /* top open projects */
-    const top = P.filter(p => p.status === "In Progress" || p.status === "Win")
+    const top = P.filter(p => p.status === "In Progress")
       .sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 8);
     document.getElementById("dashTop").innerHTML = topTable(top);
 
     /* watchlist: target quarter <= next quarter, still in progress */
-    const curQ = currentQuarter();
-    const curIdx = PT.quarterIndex(curQ);
+    const curIdx = PT.quarterIndex(currentQuarter());
     const watch = P.filter(p => p.status === "In Progress" && p.target && PT.quarterIndex(p.target) <= curIdx + 1)
       .sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 8);
     document.getElementById("dashWatch").innerHTML = watch.length
@@ -112,7 +130,8 @@ const Dashboard = (() => {
           </div>`).join("")}
       </div>`;
 
-    /* team filter segment */
+    /* period + team filters */
+    PT.wirePeriodBar(period, "dash", () => render(view));
     document.getElementById("dashTeamSeg").addEventListener("click", e => {
       const b = e.target.closest("button");
       if (!b) return;

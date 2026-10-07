@@ -66,6 +66,75 @@ const PT = (() => {
     return m ? (+m[2] * 4 + +m[1]) : null;
   }
 
+  /* ---------- period filter (shared by Dashboard + Report) ---------- */
+  function periodDefaults() { return { mode: "all", value: "" }; }
+
+  /* Projects WITHOUT a Start Date are ALWAYS included (never excluded by period). */
+  function inPeriod(p, period) {
+    if (!period || period.mode === "all" || !period.value) return true;
+    const d = p.startDate ? new Date(p.startDate) : null;
+    if (!d || isNaN(d)) return true;
+    if (period.mode === "month") return d.toISOString().slice(0, 7) === period.value;
+    if (period.mode === "quarter") return `Q${Math.floor(d.getMonth() / 3) + 1}/${d.getFullYear()}` === period.value;
+    if (period.mode === "year") return String(d.getFullYear()) === period.value;
+    return true;
+  }
+
+  function periodOptions(list) {
+    const months = [...new Set(list.map(p => p.startDate).filter(Boolean).map(s => s.slice(0, 7)))].sort().reverse();
+    const quarters = [...new Set(list.map(p => {
+      if (!p.startDate) return null;
+      const d = new Date(p.startDate);
+      return `Q${Math.floor(d.getMonth() / 3) + 1}/${d.getFullYear()}`;
+    }).filter(Boolean))].sort((a, b) => (quarterIndex(a) ?? 0) - (quarterIndex(b) ?? 0)).reverse();
+    const years = [...new Set(list.map(p => p.startDate ? String(new Date(p.startDate).getFullYear()) : null).filter(Boolean))].sort().reverse();
+    return { months, quarters, years };
+  }
+
+  function periodLabel(period) {
+    if (!period || period.mode === "all" || !period.value) return "All periods";
+    if (period.mode === "month") {
+      const [y, m] = period.value.split("-").map(Number);
+      return new Date(y, m - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    }
+    return period.value;
+  }
+
+  /* Markup for the period filter bar — prefix keeps element ids unique per page. */
+  function periodBarHTML(period, list, prefix) {
+    const { months, quarters, years } = periodOptions(list);
+    return `
+      <label>Period</label>
+      <div class="seg" id="${prefix}Mode">
+        <button data-m="all" class="${period.mode === "all" ? "on" : ""}">All</button>
+        <button data-m="month" class="${period.mode === "month" ? "on" : ""}">Monthly</button>
+        <button data-m="quarter" class="${period.mode === "quarter" ? "on" : ""}">Quarterly</button>
+        <button data-m="year" class="${period.mode === "year" ? "on" : ""}">Yearly</button>
+      </div>
+      <select id="${prefix}Value" ${period.mode === "all" ? "hidden" : ""}>
+        ${period.mode === "month" ? months.map(m => {
+          const [y, mo] = m.split("-");
+          return `<option value="${m}" ${period.value === m ? "selected" : ""}>${new Date(y, mo - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</option>`;
+        }).join("") : ""}
+        ${period.mode === "quarter" ? quarters.map(q => `<option value="${q}" ${period.value === q ? "selected" : ""}>${q}</option>`).join("") : ""}
+        ${period.mode === "year" ? years.map(y => `<option value="${y}" ${period.value === y ? "selected" : ""}>${y}</option>`).join("") : ""}
+      </select>`;
+  }
+
+  /* Wire the period bar; onChange re-renders the page. */
+  function wirePeriodBar(period, prefix, onChange) {
+    const modeEl = document.getElementById(prefix + "Mode");
+    if (modeEl) modeEl.addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      period.mode = b.dataset.m;
+      period.value = "";
+      onChange();
+    });
+    const valEl = document.getElementById(prefix + "Value");
+    if (valEl) valEl.onchange = e => { period.value = e.target.value; onChange(); };
+  }
+
   /* ---------- formatting ---------- */
   function fmtBaht(n) {
     if (n == null) return "—";
@@ -193,16 +262,22 @@ const PT = (() => {
     return out;
   }
 
-  /* aggregate by team x status */
+  /* aggregate by team x status — value buckets are per-status */
   function teamStatusMatrix(list) {
     const teams = {};
     for (const p of list) {
       const t = p.team || "—";
-      teams[t] = teams[t] || { "In Progress": 0, "Win": 0, "Lost": 0, "Drop": 0, total: 0, revenue: 0, openRev: 0 };
+      teams[t] = teams[t] || {
+        "In Progress": 0, "Win": 0, "Lost": 0, "Drop": 0,
+        total: 0, revenue: 0, openRev: 0, winRev: 0, lostRev: 0, dropRev: 0,
+      };
       teams[t][p.status] = (teams[t][p.status] || 0) + 1;
       teams[t].total++;
       teams[t].revenue += p.revenue || 0;
-      if (p.status === "In Progress" || p.status === "Win") teams[t].openRev += p.revenue || 0;
+      if (p.status === "In Progress") teams[t].openRev += p.revenue || 0;
+      if (p.status === "Win") teams[t].winRev += p.revenue || 0;
+      if (p.status === "Lost") teams[t].lostRev += p.revenue || 0;
+      if (p.status === "Drop") teams[t].dropRev += p.revenue || 0;
     }
     return teams;
   }
@@ -246,6 +321,7 @@ const PT = (() => {
     STATUSES, STATUS_COLOR, TEAM_ORDER, LS_KEY,
     mondayOf, weekKey, weekLabel, weekKeyLabel, addWeeks, fmtDate, fmtShort,
     quarters, quarterIndex,
+    periodDefaults, inPeriod, periodOptions, periodLabel, periodBarHTML, wirePeriodBar,
     fmtBaht, fmtBahtFull, esc,
     load, save, queueSave, reset, setSaveState, ingest,
     projects, byId, weekRecords, historyOf, recordWeekChange, diffWeeks,

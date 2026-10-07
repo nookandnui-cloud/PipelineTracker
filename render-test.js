@@ -87,7 +87,7 @@ try {
   console.log("PASS presales filter + column ปรากฏในหน้าโปรเจกต์");
 } catch (e) { fails++; console.log("FAIL presales filter:", e.message); }
 
-/* report: period filter UI + กรองถูกต้อง */
+/* report: period filter UI + filtering rules (no-Start-Date always included) */
 try {
   const h = makeEl("main");
   vm.runInContext("Report.render", sandbox)(h);
@@ -96,19 +96,59 @@ try {
   if (!html.includes("Monthly") || !html.includes("Quarterly") || !html.includes("Yearly")) throw new Error("period mode buttons not found");
   console.log("PASS report period filter UI present (mode: all)");
 
-  /* simulate selecting Yearly 2025 and re-render — must keep only projects with startDate in 2025 */
+  /* Yearly 2025: must keep projects whose startDate is in 2025 PLUS every project with no startDate */
   const Report = vm.runInContext("Report", sandbox);
   vm.runInContext("void (Report._setPeriod && Report._setPeriod('year','2025'))", sandbox);
   const all = PT.projects();
-  const exp2025 = all.filter(p => p.startDate && p.startDate.startsWith("2025")).length;
+  const exp2025 = all.filter(p => (p.startDate && p.startDate.startsWith("2025")) || !p.startDate).length;
   const h2 = makeEl("main");
   Report.render(h2);
   const html2 = h2.innerHTML;
   const m = /(\d+) projects/.exec(html2);
   const shown = m ? +m[1] : -1;
-  if (shown !== exp2025) throw new Error(`yearly 2025 should show ${exp2025} but got ${shown}`);
-  console.log(`PASS report yearly 2025 filters to ${shown} projects (matches startDate)`);
+  if (shown !== exp2025) throw new Error(`yearly 2025 should show ${exp2025} (2025 + no-startDate) but got ${shown}`);
+  console.log(`PASS report yearly 2025 shows ${shown} projects (2025 matches + all without Start Date)`);
+  vm.runInContext("void (Report._setPeriod && Report._setPeriod('all',''))", sandbox);
 } catch (e) { fails++; console.log("FAIL report period filter:", e.message); }
+
+/* value buckets must be strictly per-status (open=InProgress only, win=Win, drop=Drop) */
+try {
+  const all = PT.projects();
+  const sum = st => all.filter(p => p.status === st).reduce((s, p) => s + (p.revenue || 0), 0);
+  const m = PT.teamStatusMatrix(all);
+  const totOpen = Object.values(m).reduce((s, t) => s + t.openRev, 0);
+  const totWin = Object.values(m).reduce((s, t) => s + t.winRev, 0);
+  const totDrop = Object.values(m).reduce((s, t) => s + t.dropRev, 0);
+  const totLost = Object.values(m).reduce((s, t) => s + t.lostRev, 0);
+  if (totOpen !== sum("In Progress")) throw new Error(`openRev ${totOpen} != InProgress sum ${sum("In Progress")}`);
+  if (totWin !== sum("Win")) throw new Error(`winRev ${totWin} != Win sum ${sum("Win")}`);
+  if (totDrop !== sum("Drop")) throw new Error(`dropRev ${totDrop} != Drop sum ${sum("Drop")}`);
+  if (totLost !== sum("Lost")) throw new Error(`lostRev ${totLost} != Lost sum ${sum("Lost")}`);
+  const openWin = all.filter(p => p.status === "In Progress" || p.status === "Win").reduce((s, p) => s + (p.revenue || 0), 0);
+  if (totOpen === openWin && sum("Win") > 0) throw new Error("openRev still includes Win projects");
+  console.log(`PASS value buckets per-status (open ${PT.fmtBaht(totOpen)}, win ${PT.fmtBaht(totWin)}, drop ${PT.fmtBaht(totDrop)}, lost ${PT.fmtBaht(totLost)})`);
+} catch (e) { fails++; console.log("FAIL value buckets:", e.message); }
+
+/* dashboard must expose the period filter bar */
+try {
+  const h = makeEl("main");
+  vm.runInContext("Dashboard.render", sandbox)(h);
+  const html = h.innerHTML;
+  if (!html.includes('id="dashMode"')) throw new Error("dashboard period mode buttons not found");
+  if (!html.includes('id="dashValue"')) throw new Error("dashboard period value select not found");
+  if (!html.includes("Win Value") || !html.includes("Drop Value")) throw new Error("Win/Drop value KPIs not found");
+  console.log("PASS dashboard period filter + Win/Drop value KPIs present");
+} catch (e) { fails++; console.log("FAIL dashboard period filter:", e.message); }
+
+/* inPeriod: projects with no startDate must never be filtered out */
+try {
+  const p = PT.projects().find(x => !x.startDate);
+  if (!p) throw new Error("no project without startDate to test");
+  for (const mode of ["month", "quarter", "year"]) {
+    if (!PT.inPeriod(p, { mode, value: "2025-01" })) throw new Error(`no-startDate project excluded in ${mode} mode`);
+  }
+  console.log("PASS projects without Start Date are always included in period filter");
+} catch (e) { fails++; console.log("FAIL inPeriod no-startDate:", e.message); }
 
 /* ExcelSync: สร้าง workbook ได้ + ชื่อไฟล์รายวัน */
 try {
