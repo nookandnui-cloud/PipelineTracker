@@ -87,27 +87,39 @@ try {
   console.log("PASS presales filter + column ปรากฏในหน้าโปรเจกต์");
 } catch (e) { fails++; console.log("FAIL presales filter:", e.message); }
 
-/* report: period filter UI + filtering rules (no-Start-Date always included) */
+/* report: period filter UI + filtering rules (by TARGET; no-Target always included) */
 try {
   const h = makeEl("main");
   vm.runInContext("Report.render", sandbox)(h);
   let html = h.innerHTML;
   if (!html.includes('id="rpMode"')) throw new Error("mode buttons not found");
   if (!html.includes("Monthly") || !html.includes("Quarterly") || !html.includes("Yearly")) throw new Error("period mode buttons not found");
-  console.log("PASS report period filter UI present (mode: all)");
+  if (!html.includes("by Target")) throw new Error("period bar should be labelled 'by Target'");
+  console.log("PASS report period filter UI present (mode: all, labelled by Target)");
 
-  /* Yearly 2025: must keep projects whose startDate is in 2025 PLUS every project with no startDate */
+  /* Yearly 2025 by TARGET: keep projects whose target year is 2025 PLUS those without a Target */
   const Report = vm.runInContext("Report", sandbox);
   vm.runInContext("void (Report._setPeriod && Report._setPeriod('year','2025'))", sandbox);
   const all = PT.projects();
-  const exp2025 = all.filter(p => (p.startDate && p.startDate.startsWith("2025")) || !p.startDate).length;
+  const isQ = t => /^Q[1-4]\/\d{4}$/.test(t || "");
+  const exp2025 = all.filter(p => (isQ(p.target) && p.target.endsWith("/2025")) || !isQ(p.target)).length;
   const h2 = makeEl("main");
   Report.render(h2);
   const html2 = h2.innerHTML;
   const m = /(\d+) projects/.exec(html2);
   const shown = m ? +m[1] : -1;
-  if (shown !== exp2025) throw new Error(`yearly 2025 should show ${exp2025} (2025 + no-startDate) but got ${shown}`);
-  console.log(`PASS report yearly 2025 shows ${shown} projects (2025 matches + all without Start Date)`);
+  if (shown !== exp2025) throw new Error(`target-year 2025 should show ${exp2025} but got ${shown}`);
+  console.log(`PASS report target-year 2025 shows ${shown} projects (target 2025 + all without Target)`);
+
+  /* Quarterly by TARGET must match the target quarter exactly */
+  vm.runInContext("void (Report._setPeriod && Report._setPeriod('quarter','Q3/2026'))", sandbox);
+  const expQ = all.filter(p => p.target === "Q3/2026").length;
+  const h3 = makeEl("main");
+  Report.render(h3);
+  const m3 = /(\d+) projects/.exec(h3.innerHTML);
+  const shownQ = m3 ? +m3[1] : -1;
+  if (shownQ !== expQ) throw new Error(`target Q3/2026 should show ${expQ} but got ${shownQ}`);
+  console.log(`PASS report target-quarter Q3/2026 shows ${shownQ} projects`);
   vm.runInContext("void (Report._setPeriod && Report._setPeriod('all',''))", sandbox);
 } catch (e) { fails++; console.log("FAIL report period filter:", e.message); }
 
@@ -140,15 +152,25 @@ try {
   console.log("PASS dashboard period filter + Win/Drop value KPIs present");
 } catch (e) { fails++; console.log("FAIL dashboard period filter:", e.message); }
 
-/* inPeriod: projects with no startDate must never be filtered out */
+/* inPeriod: filtering must use TARGET, and projects with no Target must never be filtered out */
 try {
-  const p = PT.projects().find(x => !x.startDate);
-  if (!p) throw new Error("no project without startDate to test");
+  const withTarget = PT.projects().find(x => x.target === "Q1/2026");
+  if (!withTarget) throw new Error("no Q1/2026 project to test");
+  if (!PT.inPeriod(withTarget, { mode: "quarter", value: "Q1/2026" })) throw new Error("Q1/2026 project excluded from its own quarter");
+  if (PT.inPeriod(withTarget, { mode: "quarter", value: "Q3/2026" })) throw new Error("Q1/2026 project leaked into Q3/2026");
+  if (!PT.inPeriod(withTarget, { mode: "year", value: "2026" })) throw new Error("Q1/2026 project excluded from year 2026");
+  if (PT.inPeriod(withTarget, { mode: "year", value: "2025" })) throw new Error("Q1/2026 project leaked into year 2025");
+
+  const p = { id: "TEST", name: "synthetic", target: null };
   for (const mode of ["month", "quarter", "year"]) {
-    if (!PT.inPeriod(p, { mode, value: "2025-01" })) throw new Error(`no-startDate project excluded in ${mode} mode`);
+    if (!PT.inPeriod(p, { mode, value: mode === "month" ? "2025-01" : "Q3/2025" })) throw new Error(`no-Target project excluded in ${mode} mode`);
   }
-  console.log("PASS projects without Start Date are always included in period filter");
-} catch (e) { fails++; console.log("FAIL inPeriod no-startDate:", e.message); }
+  const bad = { id: "TEST2", name: "synthetic-bad", target: "Q2/202ุ6" };
+  for (const mode of ["month", "quarter", "year"]) {
+    if (!PT.inPeriod(bad, { mode, value: "Q3/2025" })) throw new Error(`unparseable-Target project excluded in ${mode} mode`);
+  }
+  console.log("PASS period filter uses Target (exact quarter/year match) and always includes no-Target projects");
+} catch (e) { fails++; console.log("FAIL inPeriod target rules:", e.message); }
 
 /* ExcelSync: สร้าง workbook ได้ + ชื่อไฟล์รายวัน */
 try {

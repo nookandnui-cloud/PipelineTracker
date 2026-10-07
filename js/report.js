@@ -4,7 +4,7 @@
      Win Value  = sum(revenue) WHERE status = "Win"
      Lost Value = sum(revenue) WHERE status = "Lost"
      Drop Value = sum(revenue) WHERE status = "Drop"
-   Projects without a Start Date are ALWAYS included (never excluded by the period filter). */
+   Projects without a Target are ALWAYS included (never excluded by the period filter). */
 "use strict";
 
 const Report = (() => {
@@ -29,7 +29,7 @@ const Report = (() => {
     const grandTotal = P.reduce((s, p) => s + (p.revenue || 0), 0);
 
     const presales = presalesMatrix(P);
-    const noDate = all.filter(p => !p.startDate).length;
+    const noTarget = all.filter(p => !/^Q[1-4]\/\d{4}$/.test(p.target || "")).length;
 
     view.innerHTML = `
       <div class="view-head">
@@ -43,7 +43,7 @@ const Report = (() => {
       <div class="card" style="margin-bottom:14px">
         <div class="filters">
           ${PT.periodBarHTML(period, all, "rp")}
-          ${noDate ? `<span class="muted small">${noDate} project(s) with no Start Date are always included</span>` : ""}
+          ${noTarget ? `<span class="muted small">${noTarget} project(s) with no Target are always included</span>` : ""}
         </div>
       </div>
 

@@ -66,28 +66,46 @@ const PT = (() => {
     return m ? (+m[2] * 4 + +m[1]) : null;
   }
 
-  /* ---------- period filter (shared by Dashboard + Report) ---------- */
+  /* ---------- period filter (shared by Dashboard + Report) ----------
+     Filtering is based on the project's TARGET quarter (e.g. Q1/2026),
+     NOT the Start Date. Projects without a Target are always included. */
   function periodDefaults() { return { mode: "all", value: "" }; }
 
-  /* Projects WITHOUT a Start Date are ALWAYS included (never excluded by period). */
+  /* "Q3/2025" -> { q: 3, y: 2025 }, or null when not a valid quarter */
+  function targetParts(target) {
+    const m = /^Q([1-4])\/(\d{4})$/.exec(target || "");
+    return m ? { q: +m[1], y: +m[2] } : null;
+  }
+
+  /* Projects WITHOUT a Target are ALWAYS included (never excluded by period). */
   function inPeriod(p, period) {
     if (!period || period.mode === "all" || !period.value) return true;
-    const d = p.startDate ? new Date(p.startDate) : null;
-    if (!d || isNaN(d)) return true;
-    if (period.mode === "month") return d.toISOString().slice(0, 7) === period.value;
-    if (period.mode === "quarter") return `Q${Math.floor(d.getMonth() / 3) + 1}/${d.getFullYear()}` === period.value;
-    if (period.mode === "year") return String(d.getFullYear()) === period.value;
+    const t = targetParts(p.target);
+    if (!t) return true;
+    if (period.mode === "quarter") return p.target === period.value;
+    if (period.mode === "year") return String(t.y) === period.value;
+    if (period.mode === "month") {
+      /* a month maps to the quarter that contains it */
+      const [y, m] = period.value.split("-").map(Number);
+      return t.y === y && t.q === Math.floor((m - 1) / 3) + 1;
+    }
     return true;
   }
 
+  /* Options derived from Target quarters; months are the 3 months of each quarter. */
   function periodOptions(list) {
-    const months = [...new Set(list.map(p => p.startDate).filter(Boolean).map(s => s.slice(0, 7)))].sort().reverse();
-    const quarters = [...new Set(list.map(p => {
-      if (!p.startDate) return null;
-      const d = new Date(p.startDate);
-      return `Q${Math.floor(d.getMonth() / 3) + 1}/${d.getFullYear()}`;
-    }).filter(Boolean))].sort((a, b) => (quarterIndex(a) ?? 0) - (quarterIndex(b) ?? 0)).reverse();
-    const years = [...new Set(list.map(p => p.startDate ? String(new Date(p.startDate).getFullYear()) : null).filter(Boolean))].sort().reverse();
+    const quarters = [...new Set(list.map(p => p.target).filter(q => /^Q[1-4]\/\d{4}$/.test(q || "")))]
+      .sort((a, b) => (quarterIndex(a) ?? 0) - (quarterIndex(b) ?? 0)).reverse();
+    const years = [...new Set(quarters.map(q => q.slice(-4)))].sort().reverse();
+    const monthSet = new Set();
+    quarters.forEach(q => {
+      const t = targetParts(q);
+      if (!t) return;
+      for (let i = 0; i < 3; i++) {
+        monthSet.add(`${t.y}-${String((t.q - 1) * 3 + i + 1).padStart(2, "0")}`);
+      }
+    });
+    const months = [...monthSet].sort().reverse();
     return { months, quarters, years };
   }
 
@@ -104,7 +122,7 @@ const PT = (() => {
   function periodBarHTML(period, list, prefix) {
     const { months, quarters, years } = periodOptions(list);
     return `
-      <label>Period</label>
+      <label>Period (by Target)</label>
       <div class="seg" id="${prefix}Mode">
         <button data-m="all" class="${period.mode === "all" ? "on" : ""}">All</button>
         <button data-m="month" class="${period.mode === "month" ? "on" : ""}">Monthly</button>
@@ -321,7 +339,7 @@ const PT = (() => {
     STATUSES, STATUS_COLOR, TEAM_ORDER, LS_KEY,
     mondayOf, weekKey, weekLabel, weekKeyLabel, addWeeks, fmtDate, fmtShort,
     quarters, quarterIndex,
-    periodDefaults, inPeriod, periodOptions, periodLabel, periodBarHTML, wirePeriodBar,
+    periodDefaults, inPeriod, periodOptions, periodLabel, periodBarHTML, wirePeriodBar, targetParts,
     fmtBaht, fmtBahtFull, esc,
     load, save, queueSave, reset, setSaveState, ingest,
     projects, byId, weekRecords, historyOf, recordWeekChange, diffWeeks,
