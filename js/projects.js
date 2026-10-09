@@ -4,10 +4,13 @@
 const Projects = (() => {
 
   let sortKey = "team", sortDir = 1;
-  let teamFilter = "", statusFilter = "", qFilter = "", searchQ = "", presalesFilter = "";
+  let teamFilter = "", statusFilter = "", searchQ = "", presalesFilter = "";
+  let targetMode = "quarter";   // "quarter" | "year"
+  let targetValue = "";
 
   function render(view) {
     const presalesList = [...new Set(PT.projects().map(p => p.presales).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th"));
+    const { quarters, years } = PT.periodOptions(PT.projects());
     view.innerHTML = `
       <div class="view-head">
         <h1>All Projects</h1>
@@ -25,7 +28,16 @@ const Projects = (() => {
           <label>Presales</label>
           <select id="pPresales"><option value="">All</option>${presalesList.map(u => `<option ${presalesFilter === u ? "selected" : ""}>${PT.esc(u)}</option>`).join("")}</select>
           <label>Target</label>
-          <select id="pQuarter"><option value="">All</option>${PT.quarters().map(q => `<option ${qFilter === q ? "selected" : ""}>${q}</option>`).join("")}</select>
+          <div class="seg" id="pTgtMode">
+            <button data-m="year" class="${targetMode === "year" ? "on" : ""}">Yearly</button>
+            <button data-m="quarter" class="${targetMode === "quarter" ? "on" : ""}">Quarterly</button>
+          </div>
+          <select id="pTarget">
+            <option value="">All</option>
+            ${targetMode === "year"
+              ? years.map(y => `<option value="${y}" ${targetValue === y ? "selected" : ""}>${y}</option>`).join("")
+              : quarters.map(q => `<option value="${q}" ${targetValue === q ? "selected" : ""}>${q}</option>`).join("")}
+          </select>
           <label>Search</label>
           <input type="search" id="pSearch" placeholder="Name / customer / code / product…" value="${PT.esc(searchQ)}">
         </div>
@@ -45,7 +57,14 @@ const Projects = (() => {
     document.getElementById("pTeam").onchange = e => { teamFilter = e.target.value; renderRows(); };
     document.getElementById("pStatus").onchange = e => { statusFilter = e.target.value; renderRows(); };
     document.getElementById("pPresales").onchange = e => { presalesFilter = e.target.value; renderRows(); };
-    document.getElementById("pQuarter").onchange = e => { qFilter = e.target.value; renderRows(); };
+    document.getElementById("pTarget").onchange = e => { targetValue = e.target.value; renderRows(); };
+    document.getElementById("pTgtMode").addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b || b.dataset.m === targetMode) return;
+      targetMode = b.dataset.m;
+      targetValue = "";          // reset — a year is not a quarter
+      render(view);              // re-render to swap the option list
+    });
     document.getElementById("pSearch").oninput = e => { searchQ = e.target.value; renderRows(); };
     document.getElementById("pjExport").onclick = exportCSV;
     document.getElementById("pjAdd").onclick = () => openDrawer(null);
@@ -64,7 +83,11 @@ const Projects = (() => {
     if (teamFilter) P = P.filter(p => p.team === teamFilter);
     if (statusFilter) P = P.filter(p => p.status === statusFilter);
     if (presalesFilter) P = P.filter(p => p.presales === presalesFilter);
-    if (qFilter) P = P.filter(p => p.target === qFilter);
+    if (targetValue) {
+      P = P.filter(p => targetMode === "year"
+        ? p.target && p.target.endsWith("/" + targetValue)   // Q3/2026 matches 2026
+        : p.target === targetValue);                          // exact quarter
+    }
     if (searchQ) {
       const q = searchQ.toLowerCase();
       P = P.filter(p => [p.name, p.customer, p.sales, p.code, p.product, p.presales].some(v => (v || "").toLowerCase().includes(q)));
@@ -234,5 +257,5 @@ const Projects = (() => {
     document.getElementById("drawer").hidden = true;
   }
 
-  return { render, openDrawer, closeDrawer };
+  return { render, openDrawer, closeDrawer, _setTarget: (m, v) => { targetMode = m; targetValue = v; } };
 })();

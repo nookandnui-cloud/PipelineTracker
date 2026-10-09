@@ -141,6 +141,52 @@ try {
   console.log(`PASS value buckets per-status (open ${PT.fmtBaht(totOpen)}, win ${PT.fmtBaht(totWin)}, drop ${PT.fmtBaht(totDrop)}, lost ${PT.fmtBaht(totLost)})`);
 } catch (e) { fails++; console.log("FAIL value buckets:", e.message); }
 
+/* projects page: Target filter must offer Yearly and Quarterly modes */
+try {
+  const h = makeEl("main");
+  vm.runInContext("Projects.render", sandbox)(h);
+  const html = h.innerHTML;
+  if (!html.includes('id="pTgtMode"')) throw new Error("target mode segment not found");
+  if (!html.includes(">Yearly<") || !html.includes(">Quarterly<")) throw new Error("Yearly/Quarterly buttons not found");
+  if (!html.includes('id="pTarget"')) throw new Error("target value select not found");
+  if (html.includes('id="pQuarter"')) throw new Error("old pQuarter select still present");
+  console.log("PASS projects Target filter has Yearly/Quarterly modes");
+} catch (e) { fails++; console.log("FAIL projects target filter UI:", e.message); }
+
+/* projects target filtering logic: quarterly exact, yearly by suffix */
+try {
+  const Projects = vm.runInContext("Projects", sandbox);
+  const all = PT.projects();
+  const q3 = all.filter(p => p.target === "Q3/2026").length;
+  const y2026 = all.filter(p => p.target && p.target.endsWith("/2026")).length;
+  if (q3 === 0 || y2026 === 0) throw new Error("fixture data lacks Q3/2026 or 2026 targets");
+  if (y2026 <= q3) throw new Error(`year count ${y2026} should exceed single quarter ${q3}`);
+
+  /* drive the page through its own handlers via a stub-friendly run */
+  vm.runInContext("void (Projects._setTarget && Projects._setTarget('quarter','Q3/2026'))", sandbox);
+  const hq = makeEl("main");
+  Projects.render(hq);
+  const cq = byId["pjCount"] ? byId["pjCount"].textContent : "";
+  const mq = /(\d+) of (\d+) projects/.exec(cq);
+  if (!mq) throw new Error(`count line not found for quarterly (got "${cq}")`);
+  if (+mq[1] !== q3) throw new Error(`quarterly Q3/2026 shows ${mq[1]}, expected ${q3}`);
+
+  vm.runInContext("void (Projects._setTarget && Projects._setTarget('year','2026'))", sandbox);
+  const hy = makeEl("main");
+  Projects.render(hy);
+  const cy = byId["pjCount"] ? byId["pjCount"].textContent : "";
+  const my = /(\d+) of (\d+) projects/.exec(cy);
+  if (!my) throw new Error(`count line not found for yearly (got "${cy}")`);
+  if (+my[1] !== y2026) throw new Error(`yearly 2026 shows ${my[1]}, expected ${y2026}`);
+
+  /* yearly option list must contain years, quarterly list must contain quarters */
+  if (!hy.innerHTML.includes('value="2026"')) throw new Error("yearly mode should list the year 2026");
+  if (!hq.innerHTML.includes('value="Q3/2026"')) throw new Error("quarterly mode should list Q3/2026");
+
+  vm.runInContext("void (Projects._setTarget && Projects._setTarget('quarter',''))", sandbox);
+  console.log(`PASS projects target filter: quarterly Q3/2026 → ${q3}, yearly 2026 → ${y2026}`);
+} catch (e) { fails++; console.log("FAIL projects target filtering:", e.message); }
+
 /* dashboard must expose the period filter bar */
 try {
   const h = makeEl("main");
