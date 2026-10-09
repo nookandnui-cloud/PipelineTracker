@@ -55,7 +55,7 @@ const Dashboard = (() => {
         ${kpi("Win", win, PT.fmtBaht(winRev) + " THB", "up")}
         ${kpi("Lost", lost, PT.fmtBaht(lostRev) + " THB", "down")}
         ${kpi("Drop", drop, PT.fmtBaht(dropRev) + " THB", "down")}
-        ${kpi("Win Rate", (total ? Math.round(win / (win + lost + drop || 1) * 100) : 0) + "%", `${win}W / ${lost}L / ${drop}D`, "")}
+        ${kpi("Win Rate", Math.round(win / ((win + lost) || 1) * 100) + "%", `${win}W / ${lost}L (Drop excluded)`, "")}
       </div>
 
       <div class="grid cols-2" style="margin-bottom:14px">

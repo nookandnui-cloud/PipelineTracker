@@ -152,6 +152,23 @@ try {
   console.log("PASS dashboard period filter + Win/Drop value KPIs present");
 } catch (e) { fails++; console.log("FAIL dashboard period filter:", e.message); }
 
+/* win rate = Win / (Win + Lost) * 100 — Drop must NOT be counted */
+try {
+  const all = PT.projects();
+  const win = all.filter(p => p.status === "Win").length;
+  const lost = all.filter(p => p.status === "Lost").length;
+  const drop = all.filter(p => p.status === "Drop").length;
+  const expected = Math.round(win / ((win + lost) || 1) * 100);
+  const withDrop = Math.round(win / ((win + lost + drop) || 1) * 100);
+  const h = makeEl("main");
+  vm.runInContext("Dashboard.render", sandbox)(h);
+  const html = h.innerHTML;
+  if (!html.includes(expected + "%")) throw new Error(`Win Rate ${expected}% not found in dashboard`);
+  if (expected !== withDrop && html.includes(withDrop + "%") && !html.includes(expected + "%")) throw new Error("dashboard still uses the Drop-inclusive rate");
+  if (!html.includes("Drop excluded")) throw new Error("missing 'Drop excluded' note");
+  console.log(`PASS win rate = Win/(Win+Lost) = ${win}/(${win}+${lost}) = ${expected}% (Drop ${drop} excluded; old formula would be ${withDrop}%)`);
+} catch (e) { fails++; console.log("FAIL win rate:", e.message); }
+
 /* inPeriod: filtering uses TARGET; projects with no/invalid Target are EXCLUDED when a period is set */
 try {
   const withTarget = PT.projects().find(x => x.target === "Q1/2026");
